@@ -12,6 +12,25 @@ function toOpenAiMessages(system, messages) {
   return [{ role: 'system', content: system }, ...messages]
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// POST mot OpenAI-kompatibel endpoint med retry vid 429 (respekterar foreslagen vantetid).
+async function openaiFetch(body) {
+  const url = `${process.env.OPENAI_BASE_URL}/chat/completions`
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+  }
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+    if (res.status !== 429) return res
+    const text = await res.text()
+    if (attempt === 3) throw new Error(`LLM 429: ${text}`)
+    const secs = Number(text.match(/try again in ([\d.]+)s/)?.[1])
+    await sleep(Number.isFinite(secs) ? secs * 1000 + 500 : 4000)
+  }
+}
+
 // Streamar textchunks från modellen (async generator).
 export async function* streamText({ system, messages, model, maxTokens = 2000 }) {
   if (PROVIDER === 'anthropic') {
@@ -30,19 +49,13 @@ export async function* streamText({ system, messages, model, maxTokens = 2000 })
   }
 
   // OpenAI-kompatibel (Groq, Gemini via kompatibel endpoint, m.fl.)
-  const res = await fetch(`${process.env.OPENAI_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      stream: true,
-      messages: toOpenAiMessages(system, messages),
-    }),
+  const res = await openaiFetch({
+    model,
+    max_tokens: maxTokens,
+    stream: true,
+    messages: toOpenAiMessages(system, messages),
   })
+  if (!res.ok) throw new Error(`LLM ${res.status}: ${await res.text()}`)
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
@@ -80,21 +93,17 @@ export async function completeJSON({ system, messages, model, maxTokens = 1500 }
     })
     text = res.content.find((b) => b.type === 'text')?.text || ''
   } else {
-    const res = await fetch(`${process.env.OPENAI_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        messages: toOpenAiMessages(system, messages),
-      }),
+    const res = await openaiFetch({
+      model,
+      max_tokens: maxTokens,
+      response_format: { type: 'json_object' },
+      messages: toOpenAiMessages(system, messages),
     })
+    if (!res.ok) throw new Error(`LLM ${res.status}: ${await res.text()}`)
     const json = await res.json()
     text = json.choices?.[0]?.message?.content || ''
   }
+  if (!text) throw new Error('LLM returnerade tomt svar')
   return parseJson(text)
 }
 

@@ -12,7 +12,13 @@ db.exec(`
     status TEXT NOT NULL,
     state_json TEXT NOT NULL,
     transcript_json TEXT NOT NULL
-  )
+  );
+  CREATE TABLE IF NOT EXISTS reports (
+    session_id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    approved INTEGER NOT NULL DEFAULT 0,
+    report_json TEXT NOT NULL
+  );
 `)
 
 export function createSession(state) {
@@ -40,4 +46,25 @@ export function saveSession(id, { status, state, transcript }) {
   db.prepare(
     `UPDATE sessions SET updated_at = ?, status = ?, state_json = ?, transcript_json = ? WHERE id = ?`,
   ).run(new Date().toISOString(), status, JSON.stringify(state), JSON.stringify(transcript), id)
+}
+
+export function saveReport(sessionId, report) {
+  db.prepare(
+    `INSERT INTO reports (session_id, created_at, approved, report_json)
+     VALUES (?, ?, 0, ?)
+     ON CONFLICT(session_id) DO UPDATE SET created_at = excluded.created_at, report_json = excluded.report_json`,
+  ).run(sessionId, new Date().toISOString(), JSON.stringify(report))
+}
+
+export function getReport(sessionId) {
+  const row = db.prepare('SELECT * FROM reports WHERE session_id = ?').get(sessionId)
+  if (!row) return null
+  return { sessionId: row.session_id, approved: !!row.approved, report: JSON.parse(row.report_json) }
+}
+
+export function setReportApproved(sessionId, approved) {
+  const res = db
+    .prepare('UPDATE reports SET approved = ? WHERE session_id = ?')
+    .run(approved ? 1 : 0, sessionId)
+  return res.changes > 0
 }

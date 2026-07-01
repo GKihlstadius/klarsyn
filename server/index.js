@@ -1,7 +1,15 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import { createSession, getSession, saveSession } from './db.js'
+import {
+  createSession,
+  getSession,
+  saveSession,
+  saveReport,
+  getReport,
+  setReportApproved,
+} from './db.js'
+import { generateReport } from './report.js'
 import {
   initialState,
   streamOpening,
@@ -109,6 +117,32 @@ app.get('/api/interview/:id/state', (req, res) => {
     extracted: session.state.extracted,
     transcript: session.transcript,
   })
+})
+
+// Generera rapport fran en (helst avslutad) intervju.
+app.post('/api/report/:sessionId/generate', async (req, res) => {
+  const session = getSession(req.params.sessionId)
+  if (!session) return res.status(404).json({ error: 'Sessionen finns inte' })
+  try {
+    const report = await generateReport(session)
+    saveReport(session.id, report)
+    res.json({ sessionId: session.id, approved: false, report })
+  } catch (err) {
+    res.status(500).json({ error: 'Kunde inte generera rapport', detail: String(err?.message || err) })
+  }
+})
+
+app.get('/api/report/:sessionId', (req, res) => {
+  const stored = getReport(req.params.sessionId)
+  if (!stored) return res.status(404).json({ error: 'Ingen rapport genererad än' })
+  res.json(stored)
+})
+
+// Admin: godkann rapport innan leverans.
+app.post('/api/report/:sessionId/approve', (req, res) => {
+  const ok = setReportApproved(req.params.sessionId, req.body?.approved !== false)
+  if (!ok) return res.status(404).json({ error: 'Ingen rapport genererad än' })
+  res.json({ sessionId: req.params.sessionId, approved: req.body?.approved !== false })
 })
 
 const PORT = process.env.PORT || 3001
