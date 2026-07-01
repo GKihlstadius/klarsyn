@@ -42,7 +42,7 @@ function DotGridIcon() {
   )
 }
 
-export default function LandingPage() {
+export default function LandingPage({ onStart }) {
   return (
     <div className="page">
       <motion.video
@@ -126,7 +126,9 @@ export default function LandingPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 1.0, ease: EASE }}
           >
-            <button className="btn btn-primary">Boka analys 995 kr</button>
+            <button className="btn btn-primary" onClick={onStart}>
+              Boka analys 995 kr
+            </button>
             <button className="btn btn-ghost">Så funkar det</button>
           </motion.div>
         </div>
