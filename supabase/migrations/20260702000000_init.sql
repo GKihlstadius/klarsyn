@@ -15,3 +15,7 @@ create table if not exists reports (
   approved boolean not null default false,
   report jsonb not null
 );
+
+-- RLS pa: publika nyckeln kommer inte at nagot, servern anvander secret-nyckeln som gar forbi RLS.
+alter table sessions enable row level security;
+alter table reports enable row level security;

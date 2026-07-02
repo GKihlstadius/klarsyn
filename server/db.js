@@ -1,107 +1,118 @@
-import pg from 'pg'
+import { createClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
 
-const { Pool } = pg
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY
 
-if (!process.env.DATABASE_URL) {
-  console.warn('VARNING: DATABASE_URL saknas. Sätt Supabase-anslutningssträngen i .env.')
+if (!SUPABASE_URL || !SUPABASE_SECRET_KEY) {
+  console.warn('VARNING: SUPABASE_URL eller SUPABASE_SECRET_KEY saknas i miljon.')
 }
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || '')
-    ? false
-    : { rejectUnauthorized: false },
+const supabase = createClient(SUPABASE_URL || 'http://localhost', SUPABASE_SECRET_KEY || 'saknas', {
+  auth: { persistSession: false },
 })
 
-// Idempotent schema, sa lokal koring funkar aven utan att ha kort migrationen.
+function must(res, what) {
+  if (res.error) throw new Error(`${what}: ${res.error.message}`)
+  return res.data
+}
+
+// Verifierar att tabellerna finns och ger tydligt fel annars.
 export async function ensureSchema() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id UUID PRIMARY KEY,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      status TEXT NOT NULL,
-      state JSONB NOT NULL,
-      transcript JSONB NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS reports (
-      session_id UUID PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      approved BOOLEAN NOT NULL DEFAULT false,
-      report JSONB NOT NULL
-    );
-  `)
+  const { error } = await supabase.from('sessions').select('id').limit(1)
+  if (error) {
+    throw new Error(
+      `Databastabellerna saknas eller gar inte att na (${error.message}). Kor migrationen i supabase/migrations/ via Supabase SQL Editor eller "supabase db push".`,
+    )
+  }
 }
 
 export async function createSession(state) {
   const id = randomUUID()
-  await pool.query(
-    `INSERT INTO sessions (id, status, state, transcript) VALUES ($1, $2, $3, $4)`,
-    [id, 'in_progress', JSON.stringify(state), JSON.stringify([])],
+  must(
+    await supabase.from('sessions').insert({
+      id,
+      status: 'in_progress',
+      state,
+      transcript: [],
+    }),
+    'createSession',
   )
   return { id, state, transcript: [] }
 }
 
 export async function getSession(id) {
-  const { rows } = await pool.query('SELECT * FROM sessions WHERE id = $1', [id])
-  if (!rows[0]) return null
-  const r = rows[0]
-  return { id: r.id, status: r.status, state: r.state, transcript: r.transcript }
+  const { data, error } = await supabase.from('sessions').select('*').eq('id', id).maybeSingle()
+  if (error) throw new Error(`getSession: ${error.message}`)
+  if (!data) return null
+  return { id: data.id, status: data.status, state: data.state, transcript: data.transcript }
 }
 
 export async function saveSession(id, { status, state, transcript }) {
-  await pool.query(
-    `UPDATE sessions SET updated_at = now(), status = $2, state = $3, transcript = $4 WHERE id = $1`,
-    [id, status, JSON.stringify(state), JSON.stringify(transcript)],
+  must(
+    await supabase
+      .from('sessions')
+      .update({ updated_at: new Date().toISOString(), status, state, transcript })
+      .eq('id', id),
+    'saveSession',
   )
 }
 
 export async function saveReport(sessionId, report) {
-  await pool.query(
-    `INSERT INTO reports (session_id, report) VALUES ($1, $2)
-     ON CONFLICT (session_id) DO UPDATE SET created_at = now(), report = EXCLUDED.report`,
-    [sessionId, JSON.stringify(report)],
+  must(
+    await supabase
+      .from('reports')
+      .upsert({ session_id: sessionId, created_at: new Date().toISOString(), report }),
+    'saveReport',
   )
 }
 
 export async function getReport(sessionId) {
-  const { rows } = await pool.query('SELECT * FROM reports WHERE session_id = $1', [sessionId])
-  if (!rows[0]) return null
-  return { sessionId: rows[0].session_id, approved: rows[0].approved, report: rows[0].report }
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .eq('session_id', sessionId)
+    .maybeSingle()
+  if (error) throw new Error(`getReport: ${error.message}`)
+  if (!data) return null
+  return { sessionId: data.session_id, approved: data.approved, report: data.report }
 }
 
 export async function updateReportJson(sessionId, report) {
-  const res = await pool.query('UPDATE reports SET report = $2 WHERE session_id = $1', [
-    sessionId,
-    JSON.stringify(report),
-  ])
-  return res.rowCount > 0
+  const { data, error } = await supabase
+    .from('reports')
+    .update({ report })
+    .eq('session_id', sessionId)
+    .select('session_id')
+  if (error) throw new Error(`updateReportJson: ${error.message}`)
+  return data.length > 0
 }
 
 export async function setReportApproved(sessionId, approved) {
-  const res = await pool.query('UPDATE reports SET approved = $2 WHERE session_id = $1', [
-    sessionId,
-    approved,
-  ])
-  return res.rowCount > 0
+  const { data, error } = await supabase
+    .from('reports')
+    .update({ approved })
+    .eq('session_id', sessionId)
+    .select('session_id')
+  if (error) throw new Error(`setReportApproved: ${error.message}`)
+  return data.length > 0
 }
 
 export async function listSessions() {
-  const { rows } = await pool.query(`
-    SELECT s.id, s.created_at, s.updated_at, s.status,
-           (r.session_id IS NOT NULL) AS has_report,
-           COALESCE(r.approved, false) AS approved
-    FROM sessions s
-    LEFT JOIN reports r ON r.session_id = s.id
-    ORDER BY s.updated_at DESC
-  `)
-  return rows.map((r) => ({
-    id: r.id,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-    status: r.status,
-    hasReport: r.has_report,
-    approved: r.approved,
-  }))
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('id, created_at, updated_at, status, reports(approved)')
+    .order('updated_at', { ascending: false })
+  if (error) throw new Error(`listSessions: ${error.message}`)
+  return data.map((r) => {
+    const report = Array.isArray(r.reports) ? r.reports[0] : r.reports
+    return {
+      id: r.id,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      status: r.status,
+      hasReport: !!report,
+      approved: report?.approved || false,
+    }
+  })
 }
