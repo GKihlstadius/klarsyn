@@ -14,6 +14,11 @@ function toOpenAiMessages(system, messages) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+// Extra params for reasoning-modeller (t.ex. gpt-oss pa Groq). Tomt om ej satt.
+const reasoningParams = process.env.OPENAI_REASONING_EFFORT
+  ? { reasoning_effort: process.env.OPENAI_REASONING_EFFORT }
+  : {}
+
 // POST mot OpenAI-kompatibel endpoint med retry vid 429 (respekterar foreslagen vantetid).
 async function openaiFetch(body) {
   const url = `${process.env.OPENAI_BASE_URL}/chat/completions`
@@ -53,6 +58,7 @@ export async function* streamText({ system, messages, model, maxTokens = 2000 })
     model,
     max_tokens: maxTokens,
     stream: true,
+    ...reasoningParams,
     messages: toOpenAiMessages(system, messages),
   })
   if (!res.ok) throw new Error(`LLM ${res.status}: ${await res.text()}`)
@@ -97,6 +103,7 @@ export async function completeJSON({ system, messages, model, maxTokens = 1500 }
       model,
       max_tokens: maxTokens,
       response_format: { type: 'json_object' },
+      ...reasoningParams,
       messages: toOpenAiMessages(system, messages),
     })
     if (!res.ok) throw new Error(`LLM ${res.status}: ${await res.text()}`)

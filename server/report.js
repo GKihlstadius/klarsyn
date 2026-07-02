@@ -19,6 +19,7 @@ Regler:
 - Betyg 1-10 ska motiveras kort och baseras på intervjun, inte gissas.
 - ROI får vara överslagsmässig men alla antaganden ska framgå tydligt.
 - Verktyg ska kopplas till kundens faktiska problem.
+- Använd bara vanliga skrivtecken. Inga tankestreck (— eller –), inga pilar (→), inga specialbindestreck. Skriv "AI-baserad" med vanligt bindestreck.
 
 Svara ENDAST med giltig JSON enligt exakt detta schema:
 {
@@ -87,7 +88,7 @@ Skriv rapporten. Prioritera flaskhalsar och AI-möjligheter efter affärsvärde.
     system: REPORT_SYSTEM,
     messages: [{ role: 'user', content: userContent }],
     model: REPORT_MODEL,
-    maxTokens: 5000,
+    maxTokens: 8000,
   })
 
   return sanitize(report)
@@ -108,5 +109,21 @@ function sanitize(report) {
   report.rekommenderade_verktyg = Array.isArray(report.rekommenderade_verktyg)
     ? report.rekommenderade_verktyg
     : []
-  return report
+  return cleanChars(report)
+}
+
+// Sakerhetsnat: byt ut tankestreck, pilar och specialbindestreck mot vanliga tecken.
+function cleanChars(value) {
+  if (typeof value === 'string') {
+    return value
+      .replace(/\s*[→⇒]\s*/g, ', ')
+      .replace(/[‑‒–—―]/g, '-')
+  }
+  if (Array.isArray(value)) return value.map(cleanChars)
+  if (value && typeof value === 'object') {
+    const out = {}
+    for (const [k, v] of Object.entries(value)) out[k] = cleanChars(v)
+    return out
+  }
+  return value
 }
