@@ -4,3 +4,4 @@ dist
 .DS_Store
 klarsyn.db
 klarsyn.db-*
+.vercel
