@@ -5,3 +5,4 @@ dist
 klarsyn.db
 klarsyn.db-*
 .vercel
+.env*
