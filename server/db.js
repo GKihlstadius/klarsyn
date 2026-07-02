@@ -62,6 +62,34 @@ export function getReport(sessionId) {
   return { sessionId: row.session_id, approved: !!row.approved, report: JSON.parse(row.report_json) }
 }
 
+export function updateReportJson(sessionId, report) {
+  const res = db
+    .prepare('UPDATE reports SET report_json = ? WHERE session_id = ?')
+    .run(JSON.stringify(report), sessionId)
+  return res.changes > 0
+}
+
+export function listSessions() {
+  return db
+    .prepare(
+      `SELECT s.id, s.created_at, s.updated_at, s.status,
+              r.session_id IS NOT NULL AS has_report,
+              COALESCE(r.approved, 0) AS approved
+       FROM sessions s
+       LEFT JOIN reports r ON r.session_id = s.id
+       ORDER BY s.updated_at DESC`,
+    )
+    .all()
+    .map((r) => ({
+      id: r.id,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      status: r.status,
+      hasReport: !!r.has_report,
+      approved: !!r.approved,
+    }))
+}
+
 export function setReportApproved(sessionId, approved) {
   const res = db
     .prepare('UPDATE reports SET approved = ? WHERE session_id = ?')

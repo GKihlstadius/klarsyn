@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { generateReport } from './api.js'
+import { generateReport, fetchReport } from './api.js'
 import './Report.css'
 
 const SCORE_LABELS = {
@@ -11,18 +11,25 @@ const SCORE_LABELS = {
   roi_potential: 'ROI-potential',
 }
 
-export default function Report({ sessionId, onExit }) {
+export default function Report({ sessionId, onExit, generate = true }) {
   const [report, setReport] = useState(null)
   const [error, setError] = useState(null)
+  const [copied, setCopied] = useState(false)
   const startedRef = useRef(false)
 
   useEffect(() => {
     if (startedRef.current) return
     startedRef.current = true
-    generateReport(sessionId)
-      .then(setReport)
-      .catch((err) => setError(String(err.message || err)))
-  }, [sessionId])
+    const load = generate ? generateReport(sessionId) : fetchReport(sessionId).then((r) => r.report)
+    load.then(setReport).catch((err) => setError(String(err.message || err)))
+  }, [sessionId, generate])
+
+  function copyLink() {
+    const url = `${window.location.origin}/?report=${sessionId}`
+    navigator.clipboard?.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   if (error) {
     return (
@@ -51,9 +58,19 @@ export default function Report({ sessionId, onExit }) {
     <div className="rp">
       <header className="rp-head">
         <div className="rp-brand">Klarsyn</div>
-        <button className="rp-back" onClick={onExit}>
-          Stäng
-        </button>
+        <div className="rp-head-actions">
+          <button className="rp-back" onClick={copyLink}>
+            {copied ? 'Länk kopierad' : 'Dela länk'}
+          </button>
+          <button className="rp-back" onClick={() => window.print()}>
+            Ladda ner PDF
+          </button>
+          {onExit && (
+            <button className="rp-back" onClick={onExit}>
+              Stäng
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="rp-body">

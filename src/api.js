@@ -34,3 +34,36 @@ export async function generateReport(sessionId) {
   if (!res.ok) throw new Error(json.error || 'Kunde inte generera rapport')
   return json.report
 }
+
+export async function fetchReport(sessionId) {
+  const res = await fetch(`/api/report/${sessionId}`)
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || 'Rapporten kunde inte hämtas')
+  return json
+}
+
+export async function saveReport(sessionId, report) {
+  const res = await fetch(`/api/report/${sessionId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ report }),
+  })
+  if (!res.ok) throw new Error('Kunde inte spara')
+  return (await res.json()).report
+}
+
+export async function approveReport(sessionId, approved) {
+  const res = await fetch(`/api/report/${sessionId}/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ approved }),
+  })
+  if (!res.ok) throw new Error('Kunde inte godkänna')
+  return (await res.json()).approved
+}
+
+export async function listSessions() {
+  const res = await fetch('/api/admin/sessions')
+  if (!res.ok) throw new Error('Kunde inte hämta sessioner')
+  return (await res.json()).sessions
+}

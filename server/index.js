@@ -8,6 +8,8 @@ import {
   saveReport,
   getReport,
   setReportApproved,
+  updateReportJson,
+  listSessions,
 } from './db.js'
 import { generateReport } from './report.js'
 import {
@@ -138,11 +140,25 @@ app.get('/api/report/:sessionId', (req, res) => {
   res.json(stored)
 })
 
+// Admin: spara redigerad rapport.
+app.put('/api/report/:sessionId', (req, res) => {
+  const report = req.body?.report
+  if (!report) return res.status(400).json({ error: 'report saknas' })
+  const ok = updateReportJson(req.params.sessionId, report)
+  if (!ok) return res.status(404).json({ error: 'Ingen rapport genererad än' })
+  res.json({ sessionId: req.params.sessionId, report })
+})
+
 // Admin: godkann rapport innan leverans.
 app.post('/api/report/:sessionId/approve', (req, res) => {
   const ok = setReportApproved(req.params.sessionId, req.body?.approved !== false)
   if (!ok) return res.status(404).json({ error: 'Ingen rapport genererad än' })
   res.json({ sessionId: req.params.sessionId, approved: req.body?.approved !== false })
+})
+
+// Admin: lista alla sessioner.
+app.get('/api/admin/sessions', (req, res) => {
+  res.json({ sessions: listSessions() })
 })
 
 const PORT = process.env.PORT || 3001

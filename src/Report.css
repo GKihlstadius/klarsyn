@@ -54,12 +54,18 @@
   font-size: 16px;
 }
 
+.rp-head-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .rp-back {
   font-size: 13px;
   color: rgba(0, 0, 0, 0.55);
   padding: 8px 16px;
   border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
 }
 
 .rp-body {
@@ -328,4 +334,26 @@
   font-weight: 500;
   padding: 14px 28px;
   border-radius: 999px;
+}
+
+/* Print / PDF */
+@media print {
+  .rp-head {
+    position: static;
+    border: none;
+  }
+  .rp-head-actions {
+    display: none;
+  }
+  .rp-section {
+    break-inside: avoid;
+  }
+  .rp-card,
+  .rp-score,
+  .rp-phase {
+    break-inside: avoid;
+  }
+  .rp-next .rp-cta {
+    display: none;
+  }
 }

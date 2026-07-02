@@ -1,0 +1,222 @@
+.ad {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #000000;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+
+.ad-top {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.ad-title {
+  font-weight: 600;
+  font-size: 16px;
+  flex: 1;
+}
+
+.ad-status {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.ad-btn {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+  white-space: nowrap;
+}
+
+.ad-btn.primary {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+
+.ad-btn.approved {
+  background: #0a7d33;
+  color: #fff;
+  border-color: #0a7d33;
+}
+
+.ad-btn:disabled {
+  opacity: 0.4;
+}
+
+.ad-muted {
+  color: rgba(0, 0, 0, 0.5);
+  padding: 24px 0;
+}
+
+.ad-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 20px;
+}
+
+.ad-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.ad-item:hover {
+  background: #fafafa;
+}
+
+.ad-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ad-id {
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+}
+
+.ad-date {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.ad-badges {
+  display: flex;
+  gap: 6px;
+}
+
+.ad-badge {
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #f0f0f2;
+}
+
+.ad-badge.completed {
+  background: #000;
+  color: #fff;
+}
+
+.ad-badge.report {
+  background: #e8eefc;
+}
+
+.ad-badge.ok {
+  background: #0a7d33;
+  color: #fff;
+}
+
+.ad-empty {
+  padding: 60px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.ad-editor {
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.ad-editor section h3 {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(0, 0, 0, 0.5);
+  margin-bottom: 12px;
+}
+
+.ad-editor input {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  width: 100%;
+  margin-bottom: 8px;
+  outline: none;
+}
+
+.ad-editor input:focus {
+  border-color: #000;
+}
+
+.ad-score {
+  display: grid;
+  grid-template-columns: 180px 70px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.ad-score label {
+  font-size: 14px;
+}
+
+.ad-score input {
+  margin-bottom: 0;
+}
+
+.ad-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.ad-row label {
+  font-size: 14px;
+}
+
+.ad-row input {
+  margin-bottom: 0;
+}
+
+.ad-tool {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.ad-tool input {
+  margin-bottom: 0;
+}
+
+.ad-remove {
+  font-size: 12px;
+  color: #b00020;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.ad-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
