@@ -220,3 +220,55 @@
   padding-top: 8px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
+
+/* Login */
+.ad-login-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.ad-login {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.ad-login-brand {
+  font-weight: 300;
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+  margin-bottom: 12px;
+}
+
+.ad-login input {
+  font-family: inherit;
+  font-size: 15px;
+  padding: 12px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  outline: none;
+}
+
+.ad-login input:focus {
+  border-color: #000;
+}
+
+.ad-login .ad-btn.primary {
+  padding: 13px;
+  border-radius: 12px;
+}
+
+.ad-login-error {
+  color: #b00020;
+  font-size: 13px;
+}
+
+.ad-login-back {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.5);
+  padding: 6px;
+}

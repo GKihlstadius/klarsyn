@@ -42,10 +42,31 @@ export async function fetchReport(sessionId) {
   return json
 }
 
+const TOKEN_KEY = 'klarsyn_admin_token'
+export const getToken = () => localStorage.getItem(TOKEN_KEY)
+export const setToken = (t) => localStorage.setItem(TOKEN_KEY, t)
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
+
+function authHeaders() {
+  return { Authorization: `Bearer ${getToken() || ''}` }
+}
+
+export async function adminLogin(user, pass) {
+  const res = await fetch('/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user, pass }),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || 'Inloggning misslyckades')
+  setToken(json.token)
+  return json.token
+}
+
 export async function saveReport(sessionId, report) {
   const res = await fetch(`/api/report/${sessionId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ report }),
   })
   if (!res.ok) throw new Error('Kunde inte spara')
@@ -55,7 +76,7 @@ export async function saveReport(sessionId, report) {
 export async function approveReport(sessionId, approved) {
   const res = await fetch(`/api/report/${sessionId}/approve`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ approved }),
   })
   if (!res.ok) throw new Error('Kunde inte godkänna')
@@ -63,7 +84,8 @@ export async function approveReport(sessionId, approved) {
 }
 
 export async function listSessions() {
-  const res = await fetch('/api/admin/sessions')
+  const res = await fetch('/api/admin/sessions', { headers: authHeaders() })
+  if (res.status === 401) throw new Error('unauthorized')
   if (!res.ok) throw new Error('Kunde inte hämta sessioner')
   return (await res.json()).sessions
 }

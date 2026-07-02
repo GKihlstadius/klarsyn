@@ -25,6 +25,16 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+const ADMIN_USER = process.env.ADMIN_USER || 'test123'
+const ADMIN_PASS = process.env.ADMIN_PASS || 'test123'
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'klarsyn-demo-token'
+
+function requireAdmin(req, res, next) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '')
+  if (token !== ADMIN_TOKEN) return res.status(401).json({ error: 'Ej behörig' })
+  next()
+}
+
 function sseHeaders(res) {
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
@@ -140,8 +150,15 @@ app.get('/api/report/:sessionId', (req, res) => {
   res.json(stored)
 })
 
+// Admin: logga in, returnerar token.
+app.post('/api/admin/login', (req, res) => {
+  const { user, pass } = req.body || {}
+  if (user === ADMIN_USER && pass === ADMIN_PASS) return res.json({ token: ADMIN_TOKEN })
+  res.status(401).json({ error: 'Fel användarnamn eller lösenord' })
+})
+
 // Admin: spara redigerad rapport.
-app.put('/api/report/:sessionId', (req, res) => {
+app.put('/api/report/:sessionId', requireAdmin, (req, res) => {
   const report = req.body?.report
   if (!report) return res.status(400).json({ error: 'report saknas' })
   const ok = updateReportJson(req.params.sessionId, report)
@@ -150,14 +167,14 @@ app.put('/api/report/:sessionId', (req, res) => {
 })
 
 // Admin: godkann rapport innan leverans.
-app.post('/api/report/:sessionId/approve', (req, res) => {
+app.post('/api/report/:sessionId/approve', requireAdmin, (req, res) => {
   const ok = setReportApproved(req.params.sessionId, req.body?.approved !== false)
   if (!ok) return res.status(404).json({ error: 'Ingen rapport genererad än' })
   res.json({ sessionId: req.params.sessionId, approved: req.body?.approved !== false })
 })
 
 // Admin: lista alla sessioner.
-app.get('/api/admin/sessions', (req, res) => {
+app.get('/api/admin/sessions', requireAdmin, (req, res) => {
   res.json({ sessions: listSessions() })
 })
 

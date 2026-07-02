@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react'
-import { listSessions, fetchReport, generateReport, saveReport, approveReport } from './api.js'
+import {
+  listSessions,
+  fetchReport,
+  generateReport,
+  saveReport,
+  approveReport,
+  adminLogin,
+  getToken,
+  clearToken,
+} from './api.js'
 import './Admin.css'
 
 const SCORE_LABELS = {
@@ -12,6 +21,10 @@ const SCORE_LABELS = {
 }
 
 export default function Admin({ onExit, onOpenReport }) {
+  const [authed, setAuthed] = useState(!!getToken())
+  const [user, setUser] = useState('')
+  const [pass, setPass] = useState('')
+  const [loginError, setLoginError] = useState('')
   const [sessions, setSessions] = useState([])
   const [selected, setSelected] = useState(null)
   const [report, setReport] = useState(null)
@@ -19,11 +32,61 @@ export default function Admin({ onExit, onOpenReport }) {
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const refresh = () => listSessions().then(setSessions).catch(() => {})
+  const refresh = () =>
+    listSessions()
+      .then(setSessions)
+      .catch((e) => {
+        if (String(e.message) === 'unauthorized') {
+          clearToken()
+          setAuthed(false)
+        }
+      })
 
   useEffect(() => {
-    refresh()
-  }, [])
+    if (authed) refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed])
+
+  async function doLogin(e) {
+    e.preventDefault()
+    setLoginError('')
+    try {
+      await adminLogin(user, pass)
+      setAuthed(true)
+    } catch (err) {
+      setLoginError(String(err.message || err))
+    }
+  }
+
+  function logout() {
+    clearToken()
+    setAuthed(false)
+    setSelected(null)
+  }
+
+  if (!authed) {
+    return (
+      <div className="ad ad-login-wrap">
+        <form className="ad-login" onSubmit={doLogin}>
+          <div className="ad-login-brand">Klarsyn admin</div>
+          <input placeholder="Användarnamn" value={user} onChange={(e) => setUser(e.target.value)} />
+          <input
+            type="password"
+            placeholder="Lösenord"
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+          />
+          {loginError && <span className="ad-login-error">{loginError}</span>}
+          <button className="ad-btn primary" type="submit">
+            Logga in
+          </button>
+          <button type="button" className="ad-login-back" onClick={onExit}>
+            Till startsidan
+          </button>
+        </form>
+      </div>
+    )
+  }
 
   async function open(s) {
     setSelected(s.id)
@@ -240,6 +303,9 @@ export default function Admin({ onExit, onOpenReport }) {
     <div className="ad">
       <header className="ad-top">
         <span className="ad-title">Klarsyn admin</span>
+        <button className="ad-btn" onClick={logout}>
+          Logga ut
+        </button>
         <button className="ad-btn" onClick={onExit}>
           Till startsidan
         </button>

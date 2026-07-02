@@ -45,6 +45,7 @@ export default function Report({ sessionId, onExit, generate = true }) {
   if (!report) {
     return (
       <div className="rp-center">
+        <div className="rp-center-brand">Klarsyn</div>
         <div className="rp-spinner" />
         <p>Tar fram din rapport. Detta tar en liten stund.</p>
       </div>
@@ -74,7 +75,13 @@ export default function Report({ sessionId, onExit, generate = true }) {
       </header>
 
       <div className="rp-body">
-        <h1 className="rp-title">Din AI-mognadsanalys</h1>
+        <div className="rp-subtitle">
+          <span className="rp-dot" />
+          <span>AI-analys för svenska företag</span>
+        </div>
+        <h1 className="rp-title">
+          Din AI-mognadsanalys{bp.bransch ? ` · ${bp.bransch}` : ''}
+        </h1>
 
         <section className="rp-section rp-summary">
           <h2>Sammanfattning</h2>

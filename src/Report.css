@@ -74,10 +74,33 @@
   padding: 40px 24px 80px;
 }
 
+.rp-center-brand {
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.rp-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+  margin-bottom: 14px;
+}
+
+.rp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #000;
+}
+
 .rp-title {
   font-weight: 300;
-  font-size: clamp(2rem, 6vw, 3.2rem);
+  font-size: clamp(2rem, 6vw, 3.5rem);
   letter-spacing: -0.03em;
+  line-height: 1;
   margin-bottom: 40px;
 }
 
@@ -210,12 +233,14 @@
 
 .rp-tag {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
-  padding: 4px 10px;
+  letter-spacing: 0.04em;
+  padding: 5px 12px;
   border-radius: 999px;
   white-space: nowrap;
-  background: #f0f0f2;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .rp-tag.prio-hog,
