@@ -10,6 +10,7 @@ import {
   setReportApproved,
   updateReportJson,
   listSessions,
+  ensureSchema,
 } from './db.js'
 import { generateReport } from './report.js'
 import {
@@ -62,7 +63,7 @@ function progress(state) {
 
 // Starta intervju: skapar session och streamar öppningsfrågan.
 app.post('/api/interview/start', async (req, res) => {
-  const session = createSession(initialState())
+  const session = await createSession(initialState())
   sseHeaders(res)
   send(res, 'session', { sessionId: session.id, progress: progress(session.state) })
 
@@ -78,7 +79,7 @@ app.post('/api/interview/start', async (req, res) => {
   }
 
   const transcript = [{ role: 'assistant', content: opening }]
-  saveSession(session.id, { status: 'in_progress', state: session.state, transcript })
+  await saveSession(session.id, { status: 'in_progress', state: session.state, transcript })
   send(res, 'done', { progress: progress(session.state) })
   res.end()
 })
@@ -86,7 +87,7 @@ app.post('/api/interview/start', async (req, res) => {
 // Skicka kundsvar: uppdaterar state och streamar nästa fråga.
 app.post('/api/interview/message', async (req, res) => {
   const { sessionId, message } = req.body || {}
-  const session = getSession(sessionId)
+  const session = await getSession(sessionId)
   if (!session) return res.status(404).json({ error: 'Sessionen finns inte' })
   if (session.status === 'completed') return res.status(409).json({ error: 'Intervjun är avslutad' })
 
@@ -115,13 +116,13 @@ app.post('/api/interview/message', async (req, res) => {
   transcript.push({ role: 'assistant', content: reply })
   const finished = allPartsCovered(state)
   const status = finished ? 'completed' : 'in_progress'
-  saveSession(sessionId, { status, state, transcript })
+  await saveSession(sessionId, { status, state, transcript })
   send(res, 'done', { finished, progress: progress(state) })
   res.end()
 })
 
-app.get('/api/interview/:id/state', (req, res) => {
-  const session = getSession(req.params.id)
+app.get('/api/interview/:id/state', async (req, res) => {
+  const session = await getSession(req.params.id)
   if (!session) return res.status(404).json({ error: 'Sessionen finns inte' })
   res.json({
     status: session.status,
@@ -133,19 +134,19 @@ app.get('/api/interview/:id/state', (req, res) => {
 
 // Generera rapport fran en (helst avslutad) intervju.
 app.post('/api/report/:sessionId/generate', async (req, res) => {
-  const session = getSession(req.params.sessionId)
+  const session = await getSession(req.params.sessionId)
   if (!session) return res.status(404).json({ error: 'Sessionen finns inte' })
   try {
     const report = await generateReport(session)
-    saveReport(session.id, report)
+    await saveReport(session.id, report)
     res.json({ sessionId: session.id, approved: false, report })
   } catch (err) {
     res.status(500).json({ error: 'Kunde inte generera rapport', detail: String(err?.message || err) })
   }
 })
 
-app.get('/api/report/:sessionId', (req, res) => {
-  const stored = getReport(req.params.sessionId)
+app.get('/api/report/:sessionId', async (req, res) => {
+  const stored = await getReport(req.params.sessionId)
   if (!stored) return res.status(404).json({ error: 'Ingen rapport genererad än' })
   res.json(stored)
 })
@@ -158,25 +159,30 @@ app.post('/api/admin/login', (req, res) => {
 })
 
 // Admin: spara redigerad rapport.
-app.put('/api/report/:sessionId', requireAdmin, (req, res) => {
+app.put('/api/report/:sessionId', requireAdmin, async (req, res) => {
   const report = req.body?.report
   if (!report) return res.status(400).json({ error: 'report saknas' })
-  const ok = updateReportJson(req.params.sessionId, report)
+  const ok = await updateReportJson(req.params.sessionId, report)
   if (!ok) return res.status(404).json({ error: 'Ingen rapport genererad än' })
   res.json({ sessionId: req.params.sessionId, report })
 })
 
 // Admin: godkann rapport innan leverans.
-app.post('/api/report/:sessionId/approve', requireAdmin, (req, res) => {
-  const ok = setReportApproved(req.params.sessionId, req.body?.approved !== false)
+app.post('/api/report/:sessionId/approve', requireAdmin, async (req, res) => {
+  const ok = await setReportApproved(req.params.sessionId, req.body?.approved !== false)
   if (!ok) return res.status(404).json({ error: 'Ingen rapport genererad än' })
   res.json({ sessionId: req.params.sessionId, approved: req.body?.approved !== false })
 })
 
 // Admin: lista alla sessioner.
-app.get('/api/admin/sessions', requireAdmin, (req, res) => {
-  res.json({ sessions: listSessions() })
+app.get('/api/admin/sessions', requireAdmin, async (req, res) => {
+  res.json({ sessions: await listSessions() })
 })
 
 const PORT = process.env.PORT || 3001
-app.listen(PORT, () => console.log(`Klarsyn intervjumotor kör på http://localhost:${PORT}`))
+ensureSchema()
+  .then(() => app.listen(PORT, () => console.log(`Klarsyn intervjumotor kör på http://localhost:${PORT}`)))
+  .catch((err) => {
+    console.error('Kunde inte initiera databasen:', err.message)
+    process.exit(1)
+  })

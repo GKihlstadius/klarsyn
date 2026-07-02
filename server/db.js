@@ -1,98 +1,107 @@
-import Database from 'better-sqlite3'
+import pg from 'pg'
 import { randomUUID } from 'node:crypto'
 
-const db = new Database(process.env.DB_PATH || 'klarsyn.db')
-db.pragma('journal_mode = WAL')
+const { Pool } = pg
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS sessions (
-    id TEXT PRIMARY KEY,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    status TEXT NOT NULL,
-    state_json TEXT NOT NULL,
-    transcript_json TEXT NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS reports (
-    session_id TEXT PRIMARY KEY,
-    created_at TEXT NOT NULL,
-    approved INTEGER NOT NULL DEFAULT 0,
-    report_json TEXT NOT NULL
-  );
-`)
+if (!process.env.DATABASE_URL) {
+  console.warn('VARNING: DATABASE_URL saknas. Sätt Supabase-anslutningssträngen i .env.')
+}
 
-export function createSession(state) {
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || '')
+    ? false
+    : { rejectUnauthorized: false },
+})
+
+// Idempotent schema, sa lokal koring funkar aven utan att ha kort migrationen.
+export async function ensureSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id UUID PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      status TEXT NOT NULL,
+      state JSONB NOT NULL,
+      transcript JSONB NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS reports (
+      session_id UUID PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      approved BOOLEAN NOT NULL DEFAULT false,
+      report JSONB NOT NULL
+    );
+  `)
+}
+
+export async function createSession(state) {
   const id = randomUUID()
-  const now = new Date().toISOString()
-  db.prepare(
-    `INSERT INTO sessions (id, created_at, updated_at, status, state_json, transcript_json)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(id, now, now, 'in_progress', JSON.stringify(state), JSON.stringify([]))
+  await pool.query(
+    `INSERT INTO sessions (id, status, state, transcript) VALUES ($1, $2, $3, $4)`,
+    [id, 'in_progress', JSON.stringify(state), JSON.stringify([])],
+  )
   return { id, state, transcript: [] }
 }
 
-export function getSession(id) {
-  const row = db.prepare('SELECT * FROM sessions WHERE id = ?').get(id)
-  if (!row) return null
-  return {
-    id: row.id,
-    status: row.status,
-    state: JSON.parse(row.state_json),
-    transcript: JSON.parse(row.transcript_json),
-  }
+export async function getSession(id) {
+  const { rows } = await pool.query('SELECT * FROM sessions WHERE id = $1', [id])
+  if (!rows[0]) return null
+  const r = rows[0]
+  return { id: r.id, status: r.status, state: r.state, transcript: r.transcript }
 }
 
-export function saveSession(id, { status, state, transcript }) {
-  db.prepare(
-    `UPDATE sessions SET updated_at = ?, status = ?, state_json = ?, transcript_json = ? WHERE id = ?`,
-  ).run(new Date().toISOString(), status, JSON.stringify(state), JSON.stringify(transcript), id)
+export async function saveSession(id, { status, state, transcript }) {
+  await pool.query(
+    `UPDATE sessions SET updated_at = now(), status = $2, state = $3, transcript = $4 WHERE id = $1`,
+    [id, status, JSON.stringify(state), JSON.stringify(transcript)],
+  )
 }
 
-export function saveReport(sessionId, report) {
-  db.prepare(
-    `INSERT INTO reports (session_id, created_at, approved, report_json)
-     VALUES (?, ?, 0, ?)
-     ON CONFLICT(session_id) DO UPDATE SET created_at = excluded.created_at, report_json = excluded.report_json`,
-  ).run(sessionId, new Date().toISOString(), JSON.stringify(report))
+export async function saveReport(sessionId, report) {
+  await pool.query(
+    `INSERT INTO reports (session_id, report) VALUES ($1, $2)
+     ON CONFLICT (session_id) DO UPDATE SET created_at = now(), report = EXCLUDED.report`,
+    [sessionId, JSON.stringify(report)],
+  )
 }
 
-export function getReport(sessionId) {
-  const row = db.prepare('SELECT * FROM reports WHERE session_id = ?').get(sessionId)
-  if (!row) return null
-  return { sessionId: row.session_id, approved: !!row.approved, report: JSON.parse(row.report_json) }
+export async function getReport(sessionId) {
+  const { rows } = await pool.query('SELECT * FROM reports WHERE session_id = $1', [sessionId])
+  if (!rows[0]) return null
+  return { sessionId: rows[0].session_id, approved: rows[0].approved, report: rows[0].report }
 }
 
-export function updateReportJson(sessionId, report) {
-  const res = db
-    .prepare('UPDATE reports SET report_json = ? WHERE session_id = ?')
-    .run(JSON.stringify(report), sessionId)
-  return res.changes > 0
+export async function updateReportJson(sessionId, report) {
+  const res = await pool.query('UPDATE reports SET report = $2 WHERE session_id = $1', [
+    sessionId,
+    JSON.stringify(report),
+  ])
+  return res.rowCount > 0
 }
 
-export function listSessions() {
-  return db
-    .prepare(
-      `SELECT s.id, s.created_at, s.updated_at, s.status,
-              r.session_id IS NOT NULL AS has_report,
-              COALESCE(r.approved, 0) AS approved
-       FROM sessions s
-       LEFT JOIN reports r ON r.session_id = s.id
-       ORDER BY s.updated_at DESC`,
-    )
-    .all()
-    .map((r) => ({
-      id: r.id,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-      status: r.status,
-      hasReport: !!r.has_report,
-      approved: !!r.approved,
-    }))
+export async function setReportApproved(sessionId, approved) {
+  const res = await pool.query('UPDATE reports SET approved = $2 WHERE session_id = $1', [
+    sessionId,
+    approved,
+  ])
+  return res.rowCount > 0
 }
 
-export function setReportApproved(sessionId, approved) {
-  const res = db
-    .prepare('UPDATE reports SET approved = ? WHERE session_id = ?')
-    .run(approved ? 1 : 0, sessionId)
-  return res.changes > 0
+export async function listSessions() {
+  const { rows } = await pool.query(`
+    SELECT s.id, s.created_at, s.updated_at, s.status,
+           (r.session_id IS NOT NULL) AS has_report,
+           COALESCE(r.approved, false) AS approved
+    FROM sessions s
+    LEFT JOIN reports r ON r.session_id = s.id
+    ORDER BY s.updated_at DESC
+  `)
+  return rows.map((r) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    status: r.status,
+    hasReport: r.has_report,
+    approved: r.approved,
+  }))
 }

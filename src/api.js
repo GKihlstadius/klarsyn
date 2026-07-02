@@ -1,7 +1,10 @@
+// Bas-URL till backend. Tom i dev (Vite-proxy), sätts via VITE_API_URL i produktion.
+const API = import.meta.env.VITE_API_URL || ''
+
 // Konsumerar en SSE-ström från backend. onEvent(name, data) för varje event,
 // onDelta(text) för textchunks.
 export async function streamSse(path, body, { onDelta, onEvent }) {
-  const res = await fetch(path, {
+  const res = await fetch(API + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {}),
@@ -29,14 +32,14 @@ export async function streamSse(path, body, { onDelta, onEvent }) {
 }
 
 export async function generateReport(sessionId) {
-  const res = await fetch(`/api/report/${sessionId}/generate`, { method: 'POST' })
+  const res = await fetch(API + `/api/report/${sessionId}/generate`, { method: 'POST' })
   const json = await res.json()
   if (!res.ok) throw new Error(json.error || 'Kunde inte generera rapport')
   return json.report
 }
 
 export async function fetchReport(sessionId) {
-  const res = await fetch(`/api/report/${sessionId}`)
+  const res = await fetch(API + `/api/report/${sessionId}`)
   const json = await res.json()
   if (!res.ok) throw new Error(json.error || 'Rapporten kunde inte hämtas')
   return json
@@ -52,7 +55,7 @@ function authHeaders() {
 }
 
 export async function adminLogin(user, pass) {
-  const res = await fetch('/api/admin/login', {
+  const res = await fetch(API + '/api/admin/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user, pass }),
@@ -64,7 +67,7 @@ export async function adminLogin(user, pass) {
 }
 
 export async function saveReport(sessionId, report) {
-  const res = await fetch(`/api/report/${sessionId}`, {
+  const res = await fetch(API + `/api/report/${sessionId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ report }),
@@ -74,7 +77,7 @@ export async function saveReport(sessionId, report) {
 }
 
 export async function approveReport(sessionId, approved) {
-  const res = await fetch(`/api/report/${sessionId}/approve`, {
+  const res = await fetch(API + `/api/report/${sessionId}/approve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ approved }),
@@ -84,7 +87,7 @@ export async function approveReport(sessionId, approved) {
 }
 
 export async function listSessions() {
-  const res = await fetch('/api/admin/sessions', { headers: authHeaders() })
+  const res = await fetch(API + '/api/admin/sessions', { headers: authHeaders() })
   if (res.status === 401) throw new Error('unauthorized')
   if (!res.ok) throw new Error('Kunde inte hämta sessioner')
   return (await res.json()).sessions

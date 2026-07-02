@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
-    "better-sqlite3": "^11.7.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "pg": "^8.13.1",
     "lucide-react": "^0.468.0",
     "motion": "^11.15.0",
     "react": "^19.0.0",
