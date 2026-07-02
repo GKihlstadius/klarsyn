@@ -51,7 +51,6 @@ export default function LandingPage({ onStart }) {
         autoPlay
         muted
         playsInline
-        loop
         initial={{ opacity: 0, scale: 1.05 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1.8, ease: EASE }}

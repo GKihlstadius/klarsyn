@@ -11,12 +11,19 @@ const STATUS_ORDER = [
   'completed',
 ]
 
+const MAX_EXCHANGES_PER_PART = 3
+
 export function initialState() {
   const parts = {}
-  for (const key of PART_ORDER) parts[key] = { status: 'not_started', notes: '' }
+  const exchanges = {}
+  for (const key of PART_ORDER) {
+    parts[key] = { status: 'not_started', notes: '' }
+    exchanges[key] = 0
+  }
   parts.business.status = 'in_progress'
   return {
     activePart: 'business',
+    exchanges,
     parts,
     extracted: {
       company_profile: {},
@@ -95,35 +102,61 @@ Behåll och bygg vidare på tidigare extraherad data. activePart ska vara den de
     },
   ]
 
+  let result = null
   try {
-    const result = await completeJSON({
+    result = await completeJSON({
       system,
       messages,
       model: INTERVIEW_MODEL,
       maxTokens: 1500,
     })
-    return normalizeState(state, result)
   } catch {
-    return state
+    result = null
   }
+  return normalizeState(state, result)
 }
 
+const rank = (status) => STATUS_ORDER.indexOf(status)
+
 function normalizeState(prev, result) {
-  const parts = { ...prev.parts }
+  const parts = {}
   for (const key of PART_ORDER) {
-    const incoming = result.parts?.[key]
-    if (incoming?.status && STATUS_ORDER.includes(incoming.status)) {
-      parts[key] = { status: incoming.status, notes: incoming.notes || parts[key].notes }
+    const prevPart = prev.parts[key]
+    const incoming = result?.parts?.[key]
+    // Status kan bara HOJAS, aldrig sankas.
+    let status = prevPart.status
+    if (incoming?.status && STATUS_ORDER.includes(incoming.status) && rank(incoming.status) > rank(status)) {
+      status = incoming.status
     }
+    parts[key] = { status, notes: incoming?.notes || prevPart.notes }
   }
-  let activePart = result.activePart
-  if (!PART_ORDER.includes(activePart)) {
-    activePart = PART_ORDER.find((k) => !isSufficient(parts[k].status)) || 'priorities'
+
+  // Rakna utbyten pa den del som var aktiv nar kunden svarade.
+  const exchanges = { ...prev.exchanges }
+  exchanges[prev.activePart] = (exchanges[prev.activePart] || 0) + 1
+
+  // Tvinga fram progression: efter nagra utbyten accepteras tumregel och delen ar tillrackligt forstadd.
+  if (exchanges[prev.activePart] >= MAX_EXCHANGES_PER_PART && !isSufficient(parts[prev.activePart].status)) {
+    parts[prev.activePart].status = 'sufficiently_understood'
   }
+
+  // activePart ror sig bara framat: forsta ej-tillrackliga delen fran och med nuvarande.
+  const prevIdx = PART_ORDER.indexOf(prev.activePart)
+  let activePart = prev.activePart
+  for (let i = prevIdx; i < PART_ORDER.length; i++) {
+    if (!isSufficient(parts[PART_ORDER[i]].status)) {
+      activePart = PART_ORDER[i]
+      break
+    }
+    if (i === PART_ORDER.length - 1) activePart = PART_ORDER[i]
+  }
+  if (parts[activePart].status === 'not_started') parts[activePart].status = 'in_progress'
+
   return {
     activePart,
+    exchanges,
     parts,
-    extracted: { ...prev.extracted, ...(result.extracted || {}) },
+    extracted: { ...prev.extracted, ...(result?.extracted || {}) },
   }
 }
 
@@ -132,7 +165,14 @@ export function streamNextQuestion(state, transcript) {
   const finished = allPartsCovered(state)
   const guidance = finished
     ? 'Alla fyra delar är tillräckligt täckta. Avsluta intervjun varmt: tacka kunden, sammanfatta i en mening det viktigaste du hört, och förklara att en rapport med AI Readiness Score, flaskhalsar, ROI och en 90-dagars plan nu tas fram. Ställ ingen ny fråga.'
-    : `Fortsätt intervjun. ${buildStateSummary(state)}\n\nOm senaste svaret var svagt (kort, generellt, utan volym eller konsekvens): gräv djupare med en följdfråga. Annars för samtalet framåt inom den aktiva delen, eller gå vidare till nästa del när den aktiva känns tillräckligt förstådd. Återkoppla gärna till något kunden nämnt tidigare. Ställ EN fråga.`
+    : `Fortsätt intervjun. ${buildStateSummary(state)}
+
+Viktigt:
+- Ställ ALDRIG en fråga du redan ställt. Om du redan bett om en siffra och fått ett ungefärligt svar eller ett "vet inte", acceptera det, gör ett rimligt antagande och gå vidare. Mal aldrig vidare på exakta siffror.
+- Om kunden uttryckt en oro eller invändning (t.ex. sekretess, att AI gör fel, kostnad): bemöt den kort och konkret innan du går vidare. Det bygger förtroende.
+- Håll dig till den aktiva delen tills den känns tillräckligt förstådd, gå sedan vidare till nästa del.
+- Ställ EN enda fråga, inte två hopbuntade.
+- Variera hur du inleder. Använd inte "Om jag förstår rätt så" varje gång. Ibland kan du reflektera, ibland gå rakt på, ibland bjuda på en kort insikt först.`
 
   const messages = [
     ...transcriptToMessages(transcript),
