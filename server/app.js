@@ -20,6 +20,7 @@ import {
   updateState,
   allPartsCovered,
 } from './interview.js'
+// streamOpening behalls som fallback om /start anropas utan meddelande.
 import { PART_ORDER, PARTS } from './prompts.js'
 
 const app = express()
@@ -78,17 +79,21 @@ function progress(state) {
   }
 }
 
-// Starta intervju: skapar session och streamar öppningsfrågan. Kraver inloggning.
+// Starta intervju: skapar session och streamar forsta svaret. Kunden kan skicka
+// med sitt forsta meddelande (Claude-flode); utan meddelande oppnar AI:n sjalv.
 app.post('/api/interview/start', requireAuth, async (req, res) => {
   const state = initialState()
   state.owner = ADMIN_USER
   const session = await createSession(state)
+  const firstMessage = String(req.body?.message || '').trim()
   sseHeaders(res)
   send(res, 'session', { sessionId: session.id, progress: progress(session.state) })
 
+  const transcript = firstMessage ? [{ role: 'user', content: firstMessage }] : []
   let opening = ''
   try {
-    for await (const chunk of streamOpening()) {
+    const stream = firstMessage ? streamNextQuestion(state, transcript) : streamOpening()
+    for await (const chunk of stream) {
       opening += chunk
       send(res, 'delta', { text: chunk })
     }
@@ -97,9 +102,9 @@ app.post('/api/interview/start', requireAuth, async (req, res) => {
     return res.end()
   }
 
-  const transcript = [{ role: 'assistant', content: opening }]
-  await saveSession(session.id, { status: 'in_progress', state: session.state, transcript })
-  send(res, 'done', { progress: progress(session.state) })
+  transcript.push({ role: 'assistant', content: opening })
+  await saveSession(session.id, { status: 'in_progress', state, transcript })
+  send(res, 'done', { progress: progress(state) })
   res.end()
 })
 

@@ -163,9 +163,12 @@ function normalizeState(prev, result) {
 // Genererar och streamar nästa fråga (eller avslutning) utifrån state.
 export function streamNextQuestion(state, transcript) {
   const finished = allPartsCovered(state)
+  const isFirst = transcript.length === 1 && transcript[0].role === 'user'
   const guidance = finished
     ? 'Alla fyra delar är tillräckligt täckta. Avsluta intervjun varmt: tacka kunden, sammanfatta i en mening det viktigaste du hört, och förklara att en rapport med AI Readiness Score, flaskhalsar, ROI och en 90-dagars plan nu tas fram. Ställ ingen ny fråga.'
-    : `Fortsätt intervjun. ${buildStateSummary(state)}
+    : isFirst
+      ? `Detta är kundens allra första meddelande i analysen. Hälsa kort och varmt, nämn i en mening att samtalet tar ungefär en halvtimme, plocka direkt upp det kunden redan skrivit och ställ din första öppna fråga om affären. Skriv naturligt, inga listor. ${buildStateSummary(state)}`
+      : `Fortsätt intervjun. ${buildStateSummary(state)}
 
 Viktigt:
 - Ställ ALDRIG en fråga du redan ställt. Om du redan bett om en siffra och fått ett ungefärligt svar eller ett "vet inte", acceptera det, gör ett rimligt antagande och gå vidare. Mal aldrig vidare på exakta siffror.

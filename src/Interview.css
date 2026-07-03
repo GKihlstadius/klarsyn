@@ -56,29 +56,32 @@
 
 .iv-start-card {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-end;
   gap: 16px;
   width: 100%;
   max-width: 620px;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 22px;
-  padding: 20px 20px 20px 24px;
+  padding: 14px 14px 14px 24px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-  cursor: pointer;
-  text-align: left;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 
-.iv-start-card:hover {
+.iv-start-card:focus-within {
   box-shadow: 0 6px 32px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
 }
 
-.iv-start-placeholder {
+.iv-start-card textarea {
+  flex: 1;
+  resize: none;
   font-size: 16px;
-  color: rgba(0, 0, 0, 0.45);
+  font-family: inherit;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  max-height: 140px;
+  outline: none;
 }
 
 .iv-start-btn {
@@ -86,27 +89,14 @@
   color: #fff;
   font-size: 14px;
   font-weight: 500;
-  padding: 10px 22px;
+  padding: 11px 22px;
   border-radius: 999px;
   white-space: nowrap;
 }
 
-.iv-hints {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.iv-hints span {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  color: rgba(0, 0, 0, 0.6);
+.iv-start-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
 }
 
 .iv-previous {

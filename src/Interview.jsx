@@ -30,6 +30,7 @@ function LogoMark() {
 export default function Interview({ onComplete, onExit, onOpenReport, onUnauthorized }) {
   const [mode, setMode] = useState('welcome')
   const [previous, setPrevious] = useState([])
+  const [welcomeInput, setWelcomeInput] = useState('')
   const [messages, setMessages] = useState([])
   const [progress, setProgress] = useState(null)
   const [input, setInput] = useState('')
@@ -88,9 +89,13 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
     }
   }
 
-  function start() {
+  function startWithMessage() {
+    const text = welcomeInput.trim()
+    if (!text || busy) return
+    setWelcomeInput('')
+    setMessages([{ role: 'user', text }])
     setMode('chat')
-    runStream('/api/interview/start')
+    runStream('/api/interview/start', { message: text })
   }
 
   function send() {
@@ -117,15 +122,27 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
           <h1 className="iv-greeting">{greeting()}.</h1>
           <p className="iv-sub">Redo att se var AI skapar störst värde i ditt företag?</p>
 
-          <button className="iv-start-card" onClick={start}>
-            <span className="iv-start-placeholder">Starta din AI-analys</span>
-            <span className="iv-start-btn">Starta</span>
-          </button>
-
-          <div className="iv-hints">
-            <span>Cirka 30 minuter</span>
-            <span>Fyra områden</span>
-            <span>Rapport direkt</span>
+          <div className="iv-start-card">
+            <textarea
+              value={welcomeInput}
+              onChange={(e) => setWelcomeInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  startWithMessage()
+                }
+              }}
+              placeholder="Berätta kort vad ditt företag gör..."
+              rows={1}
+              autoFocus
+            />
+            <button
+              className="iv-start-btn"
+              onClick={startWithMessage}
+              disabled={!welcomeInput.trim()}
+            >
+              Starta
+            </button>
           </div>
 
           {withReports.length > 0 && (

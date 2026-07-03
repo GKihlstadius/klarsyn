@@ -10,17 +10,14 @@ const VIDEO_URL =
 
 const STEPS = [
   {
-    num: '01',
-    title: 'Svara på frågor i 30 minuter',
+    title: 'Svara på frågor inom 30 minuter',
     text: 'Vår AI-konsult intervjuar dig om affären, processerna, systemen och målen. Ett samtal, inte ett formulär.',
   },
   {
-    num: '02',
     title: 'AI:n analyserar ditt företag',
     text: 'Flaskhalsar, tidstjuvar, AI-mognad och ROI-potential identifieras utifrån dina svar.',
   },
   {
-    num: '03',
     title: 'Få din rapport direkt',
     text: 'AI Readiness Score, prioriterade åtgärder, konkreta verktyg och en 90-dagars handlingsplan. Delbar länk och PDF.',
   },
@@ -122,7 +119,7 @@ export default function LandingPage({ onStart, onAdmin }) {
             <span className="right-circle">
               <DotGridIcon />
             </span>
-            <span className="right-label">På 30 minuter</span>
+            <span className="right-label">Inom 30 minuter</span>
           </button>
         </div>
       </motion.nav>
@@ -198,8 +195,7 @@ export default function LandingPage({ onStart, onAdmin }) {
 
           <div className="how-steps">
             {STEPS.map((s) => (
-              <div className="how-step" key={s.num}>
-                <span className="how-num">{s.num}</span>
+              <div className="how-step" key={s.title}>
                 <h3>{s.title}</h3>
                 <p>{s.text}</p>
               </div>
