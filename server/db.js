@@ -98,11 +98,13 @@ export async function setReportApproved(sessionId, approved) {
   return data.length > 0
 }
 
-export async function listSessions() {
-  const { data, error } = await supabase
+export async function listSessions(owner) {
+  let query = supabase
     .from('sessions')
     .select('id, created_at, updated_at, status, reports(approved)')
     .order('updated_at', { ascending: false })
+  if (owner) query = query.eq('state->>owner', owner)
+  const { data, error } = await query
   if (error) throw new Error(`listSessions: ${error.message}`)
   return data.map((r) => {
     const report = Array.isArray(r.reports) ? r.reports[0] : r.reports

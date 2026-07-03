@@ -6,9 +6,10 @@ const API = import.meta.env.VITE_API_URL || ''
 export async function streamSse(path, body, { onDelta, onEvent }) {
   const res = await fetch(API + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body || {}),
   })
+  if (res.status === 401) throw new Error('unauthorized')
   if (!res.ok || !res.body) throw new Error(`Serverfel ${res.status}`)
 
   const reader = res.body.getReader()
@@ -32,10 +33,20 @@ export async function streamSse(path, body, { onDelta, onEvent }) {
 }
 
 export async function generateReport(sessionId) {
-  const res = await fetch(API + `/api/report/${sessionId}/generate`, { method: 'POST' })
+  const res = await fetch(API + `/api/report/${sessionId}/generate`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
   const json = await res.json()
   if (!res.ok) throw new Error(json.error || 'Kunde inte generera rapport')
   return json.report
+}
+
+export async function mySessions() {
+  const res = await fetch(API + '/api/my/sessions', { headers: authHeaders() })
+  if (res.status === 401) throw new Error('unauthorized')
+  if (!res.ok) throw new Error('Kunde inte hämta analyser')
+  return (await res.json()).sessions
 }
 
 export async function fetchReport(sessionId) {

@@ -1,10 +1,13 @@
 .page {
+  background: #ffffff;
+}
+
+.hero {
   position: relative;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  background: #ffffff;
+  justify-content: flex-end;
   overflow: hidden;
 }
 
@@ -58,6 +61,10 @@
   letter-spacing: -0.01em;
 }
 
+.menu-wrap {
+  position: relative;
+}
+
 .menu-btn {
   display: flex;
   align-items: center;
@@ -65,6 +72,31 @@
   background: #000000;
   border-radius: 999px;
   padding: 4px 12px 4px 4px;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.menu-dropdown button {
+  text-align: left;
+  font-size: 14px;
+  padding: 11px 14px;
+  border-radius: 10px;
+}
+
+.menu-dropdown button:hover {
+  background: #f4f4f6;
 }
 
 .menu-circle {
@@ -245,5 +277,91 @@
   .footer-right {
     flex-direction: column;
     align-items: flex-end;
+  }
+}
+
+/* Sa funkar det */
+.how {
+  background: #ffffff;
+  padding: 100px 20px 0;
+}
+
+.how-inner {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.how-heading {
+  font-weight: 300;
+  font-size: clamp(2rem, 5.5vw, 3.6rem);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin: 18px 0 56px;
+}
+
+.how-steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 36px;
+}
+
+.how-step {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  padding-top: 20px;
+}
+
+.how-num {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.how-step h3 {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin: 10px 0 8px;
+}
+
+.how-step p {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.how-cta {
+  margin: 64px 0 90px;
+}
+
+.site-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 22px 0 28px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.site-footer button {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.site-footer button:hover {
+  color: #000;
+}
+
+.right-pill {
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .how-steps {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
   }
 }

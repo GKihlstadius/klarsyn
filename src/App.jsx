@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import LandingPage from './LandingPage.jsx'
+import Login from './Login.jsx'
 import Interview from './Interview.jsx'
 import Report from './Report.jsx'
 import Admin from './Admin.jsx'
+import { getToken, clearToken } from './api.js'
 
 function initialRoute() {
   const params = new URLSearchParams(window.location.search)
@@ -17,9 +19,24 @@ export default function App() {
   const { screen, sessionId } = route
 
   const go = (screen, sessionId = null) => setRoute({ screen, sessionId })
+  const startFlow = () => go(getToken() ? 'interview' : 'login')
+
+  if (screen === 'login') {
+    return <Login onSuccess={() => go('interview')} onExit={() => go('landing')} />
+  }
 
   if (screen === 'interview') {
-    return <Interview onComplete={(id) => go('report', id)} onExit={() => go('landing')} />
+    return (
+      <Interview
+        onComplete={(id) => go('report', id)}
+        onExit={() => go('landing')}
+        onOpenReport={(id) => go('shared', id)}
+        onUnauthorized={() => {
+          clearToken()
+          go('login')
+        }}
+      />
+    )
   }
 
   if (screen === 'report') {
@@ -34,5 +51,5 @@ export default function App() {
     return <Admin onExit={() => go('landing')} onOpenReport={(id) => go('shared', id)} />
   }
 
-  return <LandingPage onStart={() => go('interview')} />
+  return <LandingPage onStart={startFlow} onAdmin={() => go('admin')} />
 }

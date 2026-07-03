@@ -49,6 +49,9 @@ function requireAdmin(req, res, next) {
   next()
 }
 
+// Samma token-grind for inloggade kunder (ett konto i demolaget).
+const requireAuth = requireAdmin
+
 function sseHeaders(res) {
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
@@ -75,9 +78,11 @@ function progress(state) {
   }
 }
 
-// Starta intervju: skapar session och streamar öppningsfrågan.
-app.post('/api/interview/start', async (req, res) => {
-  const session = await createSession(initialState())
+// Starta intervju: skapar session och streamar öppningsfrågan. Kraver inloggning.
+app.post('/api/interview/start', requireAuth, async (req, res) => {
+  const state = initialState()
+  state.owner = ADMIN_USER
+  const session = await createSession(state)
   sseHeaders(res)
   send(res, 'session', { sessionId: session.id, progress: progress(session.state) })
 
@@ -99,7 +104,7 @@ app.post('/api/interview/start', async (req, res) => {
 })
 
 // Skicka kundsvar: uppdaterar state och streamar nästa fråga.
-app.post('/api/interview/message', async (req, res) => {
+app.post('/api/interview/message', requireAuth, async (req, res) => {
   const { sessionId, message } = req.body || {}
   const session = await getSession(sessionId)
   if (!session) return res.status(404).json({ error: 'Sessionen finns inte' })
@@ -114,6 +119,7 @@ app.post('/api/interview/message', async (req, res) => {
   } catch {
     state = session.state
   }
+  state.owner = session.state.owner
   send(res, 'progress', { progress: progress(state) })
 
   let reply = ''
@@ -146,8 +152,8 @@ app.get('/api/interview/:id/state', async (req, res) => {
   })
 })
 
-// Generera rapport fran en (helst avslutad) intervju.
-app.post('/api/report/:sessionId/generate', async (req, res) => {
+// Generera rapport fran en (helst avslutad) intervju. Kraver inloggning (LLM-kostnad).
+app.post('/api/report/:sessionId/generate', requireAuth, async (req, res) => {
   const session = await getSession(req.params.sessionId)
   if (!session) return res.status(404).json({ error: 'Sessionen finns inte' })
   try {
@@ -191,6 +197,11 @@ app.post('/api/report/:sessionId/approve', requireAdmin, async (req, res) => {
 // Admin: lista alla sessioner.
 app.get('/api/admin/sessions', requireAdmin, async (req, res) => {
   res.json({ sessions: await listSessions() })
+})
+
+// Inloggad kund: lista sina egna analyser.
+app.get('/api/my/sessions', requireAuth, async (req, res) => {
+  res.json({ sessions: await listSessions(ADMIN_USER) })
 })
 
 export default app

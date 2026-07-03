@@ -272,3 +272,9 @@
   color: rgba(0, 0, 0, 0.5);
   padding: 6px;
 }
+
+.ad-login-sub {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.55);
+  margin-bottom: 8px;
+}
