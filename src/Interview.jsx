@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { streamSse, mySessions } from './api.js'
+import { streamSse, mySessions, getInterviewState } from './api.js'
 import './Interview.css'
 
 function greeting() {
@@ -89,6 +89,19 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
     }
   }
 
+  async function resume(id) {
+    try {
+      const data = await getInterviewState(id)
+      sessionRef.current = id
+      setMessages(data.transcript.map((t) => ({ role: t.role, text: t.content })))
+      setProgress(data.progress)
+      setFinished(data.status === 'completed')
+      setMode('chat')
+    } catch (err) {
+      setError(String(err.message || err))
+    }
+  }
+
   function startWithMessage() {
     const text = welcomeInput.trim()
     if (!text || busy) return
@@ -109,7 +122,6 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
   const pct = progress ? Math.round((progress.partsDone / progress.partsTotal) * 100) : 0
 
   if (mode === 'welcome') {
-    const withReports = previous.filter((s) => s.hasReport)
     return (
       <div className="iv iv-welcome">
         <header className="iv-top iv-top-plain">
@@ -145,14 +157,31 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
             </button>
           </div>
 
-          {withReports.length > 0 && (
+          {error && <div className="iv-error">{error}</div>}
+
+          {previous.length > 0 && (
             <div className="iv-previous">
-              <span className="iv-previous-label">Dina tidigare analyser</span>
-              {withReports.slice(0, 5).map((s) => (
-                <button key={s.id} className="iv-previous-item" onClick={() => onOpenReport(s.id)}>
-                  <span>{new Date(s.updatedAt).toLocaleDateString('sv-SE')}</span>
-                  <span className="iv-previous-open">Visa rapport</span>
-                </button>
+              <span className="iv-previous-label">Dina analyser</span>
+              {previous.slice(0, 5).map((s) => (
+                <div key={s.id} className="iv-previous-item">
+                  <span>
+                    {new Date(s.updatedAt).toLocaleDateString('sv-SE')}
+                    {s.status === 'in_progress' && <em className="iv-previous-status"> pågående</em>}
+                  </span>
+                  {s.status === 'in_progress' ? (
+                    <button className="iv-previous-open" onClick={() => resume(s.id)}>
+                      Fortsätt
+                    </button>
+                  ) : s.hasReport ? (
+                    <button className="iv-previous-open" onClick={() => onOpenReport(s.id)}>
+                      Visa rapport
+                    </button>
+                  ) : (
+                    <button className="iv-previous-open" onClick={() => onComplete(s.id)}>
+                      Skapa rapport
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}

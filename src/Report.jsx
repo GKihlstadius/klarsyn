@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { generateReport, fetchReport } from './api.js'
 import './Report.css'
 
+const LOADING_STEPS = [
+  'Analyserar dina svar',
+  'Identifierar flaskhalsar',
+  'Räknar på ROI och besparingar',
+  'Prioriterar åtgärder',
+  'Skriver din 90-dagars plan',
+]
+
 const SCORE_LABELS = {
   ai_mognad: 'AI-mognad',
   digital_mognad: 'Digital mognad',
@@ -15,6 +23,7 @@ export default function Report({ sessionId, onExit, generate = true }) {
   const [report, setReport] = useState(null)
   const [error, setError] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [loadingStep, setLoadingStep] = useState(0)
   const startedRef = useRef(false)
 
   useEffect(() => {
@@ -23,6 +32,12 @@ export default function Report({ sessionId, onExit, generate = true }) {
     const load = generate ? generateReport(sessionId) : fetchReport(sessionId).then((r) => r.report)
     load.then(setReport).catch((err) => setError(String(err.message || err)))
   }, [sessionId, generate])
+
+  useEffect(() => {
+    if (report || error || !generate) return
+    const t = setInterval(() => setLoadingStep((s) => (s + 1) % LOADING_STEPS.length), 4000)
+    return () => clearInterval(t)
+  }, [report, error, generate])
 
   function copyLink() {
     const url = `${window.location.origin}/?report=${sessionId}`
@@ -47,7 +62,8 @@ export default function Report({ sessionId, onExit, generate = true }) {
       <div className="rp-center">
         <div className="rp-center-brand">Klarsyn</div>
         <div className="rp-spinner" />
-        <p>Tar fram din rapport. Detta tar en liten stund.</p>
+        <p>{generate ? `${LOADING_STEPS[loadingStep]}...` : 'Hämtar din rapport...'}</p>
+        {generate && <span className="rp-center-hint">Detta tar ungefär en minut.</span>}
       </div>
     )
   }

@@ -42,6 +42,20 @@ export async function generateReport(sessionId) {
   return json.report
 }
 
+export async function getInterviewState(sessionId) {
+  const res = await fetch(API + `/api/interview/${sessionId}/state`)
+  if (!res.ok) throw new Error('Kunde inte hämta analysen')
+  return res.json()
+}
+
+export async function deleteSession(sessionId) {
+  const res = await fetch(API + `/api/admin/session/${sessionId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error('Kunde inte ta bort')
+}
+
 export async function mySessions() {
   const res = await fetch(API + '/api/my/sessions', { headers: authHeaders() })
   if (res.status === 401) throw new Error('unauthorized')

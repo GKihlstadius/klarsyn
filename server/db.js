@@ -98,6 +98,12 @@ export async function setReportApproved(sessionId, approved) {
   return data.length > 0
 }
 
+export async function deleteSession(id) {
+  const { data, error } = await supabase.from('sessions').delete().eq('id', id).select('id')
+  if (error) throw new Error(`deleteSession: ${error.message}`)
+  return data.length > 0
+}
+
 export async function listSessions(owner) {
   let query = supabase
     .from('sessions')

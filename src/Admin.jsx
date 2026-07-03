@@ -5,6 +5,7 @@ import {
   generateReport,
   saveReport,
   approveReport,
+  deleteSession,
   adminLogin,
   getToken,
   clearToken,
@@ -322,6 +323,17 @@ export default function Admin({ onExit, onOpenReport }) {
               <span className={`ad-badge ${s.status}`}>{s.status}</span>
               {s.hasReport && <span className="ad-badge report">rapport</span>}
               {s.approved && <span className="ad-badge ok">godkänd</span>}
+              <button
+                className="ad-remove"
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  if (!confirm('Ta bort sessionen och dess rapport permanent?')) return
+                  await deleteSession(s.id).catch(() => {})
+                  refresh()
+                }}
+              >
+                Ta bort
+              </button>
             </div>
           </div>
         ))}

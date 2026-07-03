@@ -382,3 +382,8 @@
     display: none;
   }
 }
+
+.rp-center-hint {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.4);
+}

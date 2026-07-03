@@ -10,6 +10,7 @@ import {
   setReportApproved,
   updateReportJson,
   listSessions,
+  deleteSession,
   ensureSchema,
 } from './db.js'
 import { generateReport } from './report.js'
@@ -207,6 +208,13 @@ app.get('/api/admin/sessions', requireAdmin, async (req, res) => {
 // Inloggad kund: lista sina egna analyser.
 app.get('/api/my/sessions', requireAuth, async (req, res) => {
   res.json({ sessions: await listSessions(ADMIN_USER) })
+})
+
+// Admin: ta bort session (rapporten foljer med via cascade).
+app.delete('/api/admin/session/:id', requireAdmin, async (req, res) => {
+  const ok = await deleteSession(req.params.id)
+  if (!ok) return res.status(404).json({ error: 'Sessionen finns inte' })
+  res.json({ deleted: req.params.id })
 })
 
 export default app
