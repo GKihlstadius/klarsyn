@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { streamSse, mySessions, getInterviewState } from './api.js'
 import './Interview.css'
+
+const EASE = [0.16, 1, 0.3, 1]
 
 function greeting() {
   const h = new Date().getHours()
@@ -28,9 +31,7 @@ function LogoMark() {
 }
 
 export default function Interview({ onComplete, onExit, onOpenReport, onUnauthorized }) {
-  const [mode, setMode] = useState('welcome')
   const [previous, setPrevious] = useState([])
-  const [welcomeInput, setWelcomeInput] = useState('')
   const [messages, setMessages] = useState([])
   const [progress, setProgress] = useState(null)
   const [input, setInput] = useState('')
@@ -40,6 +41,9 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
 
   const sessionRef = useRef(null)
   const scrollRef = useRef(null)
+  const taRef = useRef(null)
+
+  const started = messages.length > 0
 
   useEffect(() => {
     mySessions()
@@ -53,6 +57,10 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!busy) taRef.current?.focus()
+  }, [busy])
 
   const appendDelta = (text) =>
     setMessages((prev) => {
@@ -96,19 +104,9 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
       setMessages(data.transcript.map((t) => ({ role: t.role, text: t.content })))
       setProgress(data.progress)
       setFinished(data.status === 'completed')
-      setMode('chat')
     } catch (err) {
       setError(String(err.message || err))
     }
-  }
-
-  function startWithMessage() {
-    const text = welcomeInput.trim()
-    if (!text || busy) return
-    setWelcomeInput('')
-    setMessages([{ role: 'user', text }])
-    setMode('chat')
-    runStream('/api/interview/start', { message: text })
   }
 
   function send() {
@@ -116,57 +114,132 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
     if (!text || busy || finished) return
     setInput('')
     setMessages((prev) => [...prev, { role: 'user', text }])
-    runStream('/api/interview/message', { sessionId: sessionRef.current, message: text })
+    if (!sessionRef.current) {
+      runStream('/api/interview/start', { message: text })
+    } else {
+      runStream('/api/interview/message', { sessionId: sessionRef.current, message: text })
+    }
   }
 
   const pct = progress ? Math.round((progress.partsDone / progress.partsTotal) * 100) : 0
 
-  if (mode === 'welcome') {
-    return (
-      <div className="iv iv-welcome">
-        <header className="iv-top iv-top-plain">
-          <button className="iv-back" onClick={onExit}>
-            Till startsidan
-          </button>
-        </header>
-        <div className="iv-hero">
-          <LogoMark />
-          <h1 className="iv-greeting">{greeting()}.</h1>
-          <p className="iv-sub">Redo att se var AI skapar störst värde i ditt företag?</p>
+  return (
+    <div className={`iv ${started ? 'iv-started' : 'iv-fresh'}`}>
+      <header className="iv-top">
+        <button className="iv-back" onClick={onExit}>
+          {started ? 'Avbryt' : 'Till startsidan'}
+        </button>
+        {started && (
+          <motion.div
+            className="iv-progress"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            <div className="iv-progress-label">
+              {progress ? progress.activeTitle : 'Startar samtal'}
+              <span className="iv-progress-count">
+                {progress ? `${progress.partsDone}/${progress.partsTotal}` : ''}
+              </span>
+            </div>
+            <div className="iv-progress-bar">
+              <div className="iv-progress-fill" style={{ width: `${pct}%` }} />
+            </div>
+          </motion.div>
+        )}
+      </header>
 
-          <div className="iv-start-card">
-            <textarea
-              value={welcomeInput}
-              onChange={(e) => setWelcomeInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  startWithMessage()
-                }
-              }}
-              placeholder="Berätta kort vad ditt företag gör..."
-              rows={1}
-              autoFocus
-            />
-            <button
-              className="iv-start-btn"
-              onClick={startWithMessage}
-              disabled={!welcomeInput.trim()}
+      <div className="iv-body">
+        <AnimatePresence>
+          {!started && (
+            <motion.div
+              className="iv-hero"
+              key="hero"
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.25 }}
             >
-              Starta
-            </button>
-          </div>
+              <LogoMark />
+              <h1 className="iv-greeting">{greeting()}.</h1>
+              <p className="iv-sub">Redo att se var AI skapar störst värde i ditt företag?</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          {error && <div className="iv-error">{error}</div>}
+        {started && (
+          <main className="iv-chat" ref={scrollRef}>
+            {messages.map((m, i) => (
+              <div key={i} className={`iv-row ${m.role}`}>
+                <div className="iv-bubble">
+                  {m.text || <span className="iv-typing">skriver</span>}
+                </div>
+              </div>
+            ))}
+            {error && <div className="iv-error">{error}</div>}
+            {finished && (
+              <div className="iv-done">
+                <p>Tack, alla delar är genomgångna. Din rapport är redo att tas fram.</p>
+                <button className="iv-report-btn" onClick={() => onComplete(sessionRef.current)}>
+                  Skapa min rapport
+                </button>
+              </div>
+            )}
+          </main>
+        )}
 
-          {previous.length > 0 && (
-            <div className="iv-previous">
+        {!finished && (
+          <motion.div layout transition={{ duration: 0.5, ease: EASE }} className="iv-inputwrap">
+            <div className="iv-input-card">
+              <textarea
+                ref={taRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    send()
+                  }
+                }}
+                placeholder={
+                  started
+                    ? busy
+                      ? 'Konsulten skriver...'
+                      : 'Skriv ditt svar'
+                    : 'Berätta kort vad ditt företag gör...'
+                }
+                rows={1}
+                disabled={busy}
+                autoFocus
+              />
+              <button
+                className="iv-send"
+                onClick={send}
+                disabled={busy || !input.trim()}
+                aria-label="Skicka"
+              >
+                ↑
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {!started && error && <div className="iv-error">{error}</div>}
+
+        <AnimatePresence>
+          {!started && previous.length > 0 && (
+            <motion.div
+              className="iv-previous"
+              key="previous"
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
               <span className="iv-previous-label">Dina analyser</span>
               {previous.slice(0, 5).map((s) => (
                 <div key={s.id} className="iv-previous-item">
                   <span>
                     {new Date(s.updatedAt).toLocaleDateString('sv-SE')}
-                    {s.status === 'in_progress' && <em className="iv-previous-status"> pågående</em>}
+                    {s.status === 'in_progress' && (
+                      <em className="iv-previous-status"> pågående</em>
+                    )}
                   </span>
                   {s.status === 'in_progress' ? (
                     <button className="iv-previous-open" onClick={() => resume(s.id)}>
@@ -183,71 +256,10 @@ export default function Interview({ onComplete, onExit, onOpenReport, onUnauthor
                   )}
                 </div>
               ))}
-            </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
-    )
-  }
-
-  return (
-    <div className="iv">
-      <header className="iv-top">
-        <button className="iv-back" onClick={onExit}>
-          Avbryt
-        </button>
-        <div className="iv-progress">
-          <div className="iv-progress-label">
-            {progress ? progress.activeTitle : 'Startar samtal'}
-            <span className="iv-progress-count">
-              {progress ? `${progress.partsDone}/${progress.partsTotal}` : ''}
-            </span>
-          </div>
-          <div className="iv-progress-bar">
-            <div className="iv-progress-fill" style={{ width: `${pct}%` }} />
-          </div>
-        </div>
-      </header>
-
-      <main className="iv-chat" ref={scrollRef}>
-        {messages.map((m, i) => (
-          <div key={i} className={`iv-row ${m.role}`}>
-            <div className="iv-bubble">{m.text || <span className="iv-typing">skriver</span>}</div>
-          </div>
-        ))}
-        {error && <div className="iv-error">{error}</div>}
-        {finished && (
-          <div className="iv-done">
-            <p>Tack, alla delar är genomgångna. Din rapport är redo att tas fram.</p>
-            <button className="iv-report-btn" onClick={() => onComplete(sessionRef.current)}>
-              Skapa min rapport
-            </button>
-          </div>
-        )}
-      </main>
-
-      {!finished && (
-        <footer className="iv-inputbar">
-          <div className="iv-input-card">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  send()
-                }
-              }}
-              placeholder={busy ? 'Konsulten skriver...' : 'Skriv ditt svar'}
-              rows={1}
-              disabled={busy}
-            />
-            <button className="iv-send" onClick={send} disabled={busy || !input.trim()} aria-label="Skicka">
-              ↑
-            </button>
-          </div>
-        </footer>
-      )}
     </div>
   )
 }

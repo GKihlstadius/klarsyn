@@ -6,16 +6,13 @@
   color: #000000;
 }
 
-/* Toppbar */
+/* Toppbar (samma i bada lagen) */
 .iv-top {
   display: flex;
   align-items: center;
   gap: 20px;
   padding: 14px 20px;
-}
-
-.iv-top-plain {
-  justify-content: flex-start;
+  min-height: 62px;
 }
 
 .iv-back {
@@ -28,16 +25,57 @@
   white-space: nowrap;
 }
 
-/* Valkomstlage (Claude-kansla) */
-.iv-welcome .iv-hero {
+.iv-progress {
   flex: 1;
+}
+
+.iv-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.iv-progress-count {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.iv-progress-bar {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.iv-progress-fill {
+  height: 100%;
+  background: #000000;
+  border-radius: 999px;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Kropp: ETT sammanhangande flode. Fresh = centrerat, started = chatt over docket falt. */
+.iv-body {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
+}
+
+.iv-fresh .iv-body {
   justify-content: center;
-  padding: 24px;
-  gap: 0;
-  margin-top: -40px;
+  padding: 24px 20px 48px;
+}
+
+/* Halsning */
+.iv-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
 }
 
 .iv-greeting {
@@ -50,59 +88,151 @@
 .iv-sub {
   font-size: 16px;
   color: rgba(0, 0, 0, 0.55);
-  margin-bottom: 32px;
   text-align: center;
 }
 
-.iv-start-card {
+/* Samtal */
+.iv-chat {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 720px;
+  width: 100%;
+}
+
+.iv-row {
+  display: flex;
+}
+
+.iv-row.user {
+  justify-content: flex-end;
+}
+
+.iv-bubble {
+  max-width: 82%;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.iv-row.assistant .iv-bubble {
+  padding: 2px 0;
+}
+
+.iv-row.user .iv-bubble {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 12px 18px;
+  border-radius: 18px;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.iv-typing {
+  color: rgba(0, 0, 0, 0.4);
+  font-style: italic;
+}
+
+.iv-error {
+  align-self: center;
+  color: #b00020;
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.iv-done {
+  align-self: center;
+  text-align: center;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.iv-done p {
+  font-size: 15px;
+  color: rgba(0, 0, 0, 0.65);
+  max-width: 380px;
+}
+
+.iv-report-btn {
+  background: #000000;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 999px;
+}
+
+/* Inmatningskortet: samma element i bada lagen, glider ner nar samtalet borjar */
+.iv-inputwrap {
+  width: 100%;
+  max-width: 720px;
+  padding: 0 20px;
+}
+
+.iv-started .iv-inputwrap {
+  padding-bottom: 24px;
+  padding-top: 8px;
+}
+
+.iv-input-card {
   display: flex;
   align-items: flex-end;
-  gap: 16px;
-  width: 100%;
-  max-width: 620px;
+  gap: 10px;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 22px;
-  padding: 14px 14px 14px 24px;
+  padding: 10px 10px 10px 22px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   transition: box-shadow 0.2s ease;
 }
 
-.iv-start-card:focus-within {
+.iv-input-card:focus-within {
   box-shadow: 0 6px 32px rgba(0, 0, 0, 0.1);
 }
 
-.iv-start-card textarea {
+.iv-input-card textarea {
   flex: 1;
   resize: none;
-  font-size: 16px;
+  font-size: 15px;
   font-family: inherit;
   padding: 10px 0;
   border: none;
   background: transparent;
-  max-height: 140px;
+  max-height: 160px;
   outline: none;
 }
 
-.iv-start-btn {
+.iv-send {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
   background: #000;
   color: #fff;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 11px 22px;
-  border-radius: 999px;
-  white-space: nowrap;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.iv-start-btn:disabled {
+.iv-send:disabled {
   opacity: 0.25;
   cursor: default;
 }
 
+/* Tidigare analyser (bara fresh-laget) */
 .iv-previous {
-  margin-top: 44px;
+  margin-top: 40px;
   width: 100%;
-  max-width: 620px;
+  max-width: 720px;
+  padding: 0 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -146,160 +276,4 @@
   background: #000;
   color: #fff;
   border-color: #000;
-}
-
-/* Samtalslage */
-.iv-progress {
-  flex: 1;
-}
-
-.iv-progress-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  font-weight: 500;
-  margin-bottom: 6px;
-}
-
-.iv-progress-count {
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.iv-progress-bar {
-  height: 3px;
-  background: rgba(0, 0, 0, 0.07);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.iv-progress-fill {
-  height: 100%;
-  background: #000000;
-  border-radius: 999px;
-  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.iv-chat {
-  flex: 1;
-  overflow-y: auto;
-  padding: 28px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  max-width: 760px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-.iv-row {
-  display: flex;
-}
-
-.iv-row.user {
-  justify-content: flex-end;
-}
-
-.iv-bubble {
-  max-width: 82%;
-  font-size: 15px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-}
-
-.iv-row.assistant .iv-bubble {
-  padding: 2px 0;
-}
-
-.iv-row.user .iv-bubble {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 12px 18px;
-  border-radius: 18px;
-  border-bottom-right-radius: 6px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-}
-
-.iv-typing {
-  color: rgba(0, 0, 0, 0.4);
-  font-style: italic;
-}
-
-.iv-error {
-  align-self: center;
-  color: #b00020;
-  font-size: 13px;
-}
-
-.iv-done {
-  align-self: center;
-  text-align: center;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  align-items: center;
-}
-
-.iv-done p {
-  font-size: 15px;
-  color: rgba(0, 0, 0, 0.65);
-  max-width: 380px;
-}
-
-.iv-report-btn {
-  background: #000000;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 12px 24px;
-  border-radius: 999px;
-}
-
-/* Inmatningskort (Claude-stil) */
-.iv-inputbar {
-  padding: 12px 20px 24px;
-  max-width: 760px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-.iv-input-card {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 22px;
-  padding: 10px 10px 10px 20px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-}
-
-.iv-input-card textarea {
-  flex: 1;
-  resize: none;
-  font-size: 15px;
-  font-family: inherit;
-  padding: 10px 0;
-  border: none;
-  background: transparent;
-  max-height: 160px;
-  outline: none;
-}
-
-.iv-send {
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  background: #000;
-  color: #fff;
-  font-size: 17px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.iv-send:disabled {
-  opacity: 0.25;
-  cursor: default;
 }
